@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs};
+use std::{fs, time::Instant};
 
 type ParsedInput = Vec<Vec<u32>>;
 type Output = u32;
@@ -12,8 +12,11 @@ enum Direction {
 fn main() {
     let input = input();
 
-    println!("Result (part 1): {}", part1(&input));
-    println!("Result (part 2): {}", part2(&input));
+    let start = Instant::now();
+    println!("Result (part 1): {} [{:?}]", part1(&input), start.elapsed());
+
+    let start = Instant::now();
+    println!("Result (part 2): {} [{:?}]", part2(&input), start.elapsed());
 }
 
 fn input() -> ParsedInput {
@@ -59,7 +62,6 @@ fn is_safe(report: &[u32], tolerance: u32) -> bool {
     let mut prev = report[0];
 
     for level in report.iter().skip(1) {
-        let mut error = false;
         let diff = *level as i32 - prev as i32;
         if !(1..=3).contains(&diff.abs()) {
             return false;

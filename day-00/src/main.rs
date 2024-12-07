@@ -15,6 +15,10 @@ fn main() {
 
 fn input() -> ParsedInput {
     let input = fs::read_to_string("inputs/day-04.txt").unwrap();
+    parse_input(&input)
+}
+
+fn parse_input(input: &str) -> ParsedInput {
     input.lines().map(|line| line.chars().collect()).collect()
 }
 

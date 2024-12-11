@@ -40,8 +40,6 @@ mod tests {
 
     #[test]
     fn test_part1() {
-        println!("{:?}", input());
-
         assert_eq!(part1(&input()), 0);
     }
 

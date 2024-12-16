@@ -1,5 +1,5 @@
 use core::f64;
-use std::{collections::HashMap, io::stdin, num::ParseIntError};
+use std::{collections::HashMap, num::ParseIntError};
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct Point {

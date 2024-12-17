@@ -1,5 +1,7 @@
 use std::{fs, time::Instant};
 
+mod debug;
+
 type ParsedInput = Vec<Vec<char>>;
 type Output = u32;
 
@@ -14,7 +16,7 @@ fn main() {
 }
 
 fn input() -> ParsedInput {
-    let input = fs::read_to_string("inputs/day-04.txt").unwrap();
+    let input = fs::read_to_string("inputs/day-00.txt").unwrap();
     parse_input(&input)
 }
 

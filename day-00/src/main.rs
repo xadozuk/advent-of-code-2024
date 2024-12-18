@@ -1,7 +1,5 @@
 use std::{fs, time::Instant};
 
-mod debug;
-
 type ParsedInput = Vec<Vec<char>>;
 type Output = u32;
 

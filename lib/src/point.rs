@@ -6,6 +6,15 @@ pub struct Point {
     pub y: i64,
 }
 
+impl Point {
+    pub fn parse((x, y): (&str, &str)) -> Result<Point, std::num::ParseIntError> {
+        Ok(Point {
+            x: x.parse::<i64>()?,
+            y: y.parse::<i64>()?,
+        })
+    }
+}
+
 impl From<(i64, i64)> for Point {
     fn from((x, y): (i64, i64)) -> Self {
         Point { x, y }
@@ -125,9 +134,9 @@ impl Direction {
 
 pub const CARDINAL_DIRECTIONS: [Direction; 4] = [
     Direction::Up,
+    Direction::Right,
     Direction::Down,
     Direction::Left,
-    Direction::Right,
 ];
 
 impl From<Point> for Direction {

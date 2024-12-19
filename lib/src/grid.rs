@@ -9,16 +9,6 @@ pub struct Grid2dLine<'a, T> {
     line: &'a Vec<T>,
 }
 
-pub struct Grid2dLineIterator<'a, T> {
-    lines: &'a Vec<Vec<T>>,
-    index: usize,
-}
-
-pub struct Grid2dCellIterator<'a, T> {
-    cells: &'a Vec<T>,
-    index: usize,
-}
-
 impl<T> Grid2d<T> {
     pub fn new(values: Vec<Vec<T>>) -> Self {
         Grid2d { values }
@@ -48,11 +38,8 @@ impl<T> Grid2d<T> {
         Some(&mut self.values[pos.x as usize][pos.y as usize])
     }
 
-    pub fn iter(&self) -> Grid2dLineIterator<T> {
-        Grid2dLineIterator {
-            index: 0,
-            lines: &self.values,
-        }
+    pub fn iter(&self) -> iterator::Grid2dLines<T> {
+        iterator::Grid2dLines::new(&self.values)
     }
 }
 
@@ -74,42 +61,62 @@ where
 }
 
 impl<T> Grid2dLine<'_, T> {
-    pub fn iter(&self) -> Grid2dCellIterator<T> {
-        Grid2dCellIterator {
-            cells: self.line,
-            index: 0,
-        }
+    pub fn iter(&self) -> iterator::Grid2dCells<T> {
+        iterator::Grid2dCells::new(&self.line)
     }
 }
 
-impl<'a, T> Iterator for Grid2dLineIterator<'a, T> {
-    type Item = (usize, Grid2dLine<'a, T>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(line) = self.lines.get(self.index) {
-            let r = (self.index, Grid2dLine { line });
-
-            self.index += 1;
-
-            return Some(r);
-        }
-
-        None
+mod iterator {
+    pub struct Grid2dLines<'a, T> {
+        lines: &'a Vec<Vec<T>>,
+        index: usize,
     }
-}
 
-impl<'a, T> Iterator for Grid2dCellIterator<'a, T> {
-    type Item = (usize, &'a T);
+    pub struct Grid2dCells<'a, T> {
+        cells: &'a Vec<T>,
+        index: usize,
+    }
 
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(cell) = self.cells.get(self.index) {
-            let r = (self.index, cell);
-
-            self.index += 1;
-
-            return Some(r);
+    impl<'a, T> Grid2dLines<'a, T> {
+        pub fn new(lines: &'a Vec<Vec<T>>) -> Self {
+            Grid2dLines { lines, index: 0 }
         }
+    }
 
-        None
+    impl<'a, T> Grid2dCells<'a, T> {
+        pub fn new(cells: &'a Vec<T>) -> Self {
+            Grid2dCells { cells, index: 0 }
+        }
+    }
+    impl<'a, T> Iterator for Grid2dLines<'a, T> {
+        type Item = (usize, super::Grid2dLine<'a, T>);
+
+        fn next(&mut self) -> Option<Self::Item> {
+            if let Some(line) = self.lines.get(self.index) {
+                let r = (self.index, super::Grid2dLine { line });
+
+                self.index += 1;
+
+                return Some(r);
+            }
+
+            None
+        }
+    }
+
+    impl<'a, T> Iterator for Grid2dCells<'a, T> {
+        type Item = (usize, &'a T);
+
+        fn next(&mut self) -> Option<Self::Item> {
+            if let Some(cell) = self.cells.get(self.index) {
+                let r = (self.index, cell);
+
+                self.index += 1;
+
+                return Some(r);
+            }
+
+            None
+        }
     }
 }

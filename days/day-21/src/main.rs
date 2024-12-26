@@ -1,12 +1,12 @@
 use std::{fs, time::Instant};
 
-use keypads::{DirectionalKeyPad, GlobalSequenceCache, Keypad, NumericKeypad, SequenceCache};
-use lib::{debugln, Direction, Point};
+use keypads::KeypadChain;
+use lib::{Direction, Point};
 
 mod keypads;
 
-type ParsedInput = Vec<(String, u32)>;
-type Output = u32;
+type ParsedInput = Vec<(String, u64)>;
+type Output = u64;
 
 fn main() {
     let input = input();
@@ -27,7 +27,7 @@ fn parse_input(input: &str) -> ParsedInput {
     input
         .lines()
         .map(|code| {
-            let numeric_part: u32 = code
+            let numeric_part: u64 = code
                 .chars()
                 .filter(|c| c.is_ascii_digit())
                 .collect::<String>()
@@ -40,55 +40,21 @@ fn parse_input(input: &str) -> ParsedInput {
 }
 
 fn part1(input: &ParsedInput) -> Output {
+    let mut keypad_chain = KeypadChain::new(2);
+
     input
         .iter()
-        .map(|(code, n)| find_shortest_sequence(code, 2).len() as u32 * n)
+        .map(|(code, n)| keypad_chain.find_shortest_sequence_length(code) as u64 * n)
         .sum()
 }
 
 fn part2(input: &ParsedInput) -> Output {
+    let mut keypad_chain = KeypadChain::new(25);
+
     input
         .iter()
-        .map(|(code, n)| find_shortest_sequence(code, 25).len() as u32 * n)
+        .map(|(code, n)| keypad_chain.find_shortest_sequence_length(code) as u64 * n)
         .sum()
-}
-
-fn find_shortest_sequence(code: &str, n_directional_robots: u32) -> String {
-    /*
-        - One directional keypad that you are using.
-        - Two directional keypads that robots are using.
-        - One numeric keypad (on a door) that a robot is using.
-    */
-    let mut first_keypad = NumericKeypad::new();
-
-    let mut seq = first_keypad.sequence_for(
-        code,
-        &mut SequenceCache::new(),
-        &mut GlobalSequenceCache::new(),
-    );
-
-    if cfg!(debug_assertions) {
-        assert_numeric_sequence(&seq);
-    }
-
-    debugln!("Code: {}", code);
-    debugln!("Numeric: {}", seq);
-
-    let mut cache = SequenceCache::new();
-    let mut global_cache = GlobalSequenceCache::new();
-
-    for i in 0..n_directional_robots {
-        let mut keypad = DirectionalKeyPad::new();
-        seq = keypad.sequence_for(&seq, &mut cache, &mut global_cache);
-
-        if cfg!(debug_assertions) {
-            assert_directional_sequence(&seq);
-        }
-
-        println!("Directional {}: Done", i + 1);
-    }
-
-    seq
 }
 
 fn assert_numeric_sequence(seq: &str) {
@@ -152,7 +118,7 @@ mod tests {
     fn input() -> ParsedInput {
         parse_input(
             r#"
-            029A
+029A
 980A
 179A
 456A
@@ -165,24 +131,24 @@ mod tests {
     #[test]
     fn test_find_sequence() {
         assert_eq!(
-            find_shortest_sequence("029A", 2).len(),
+            KeypadChain::new(2).find_shortest_sequence_length("029A"),
             "<vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A".len()
         );
 
         assert_eq!(
-            find_shortest_sequence("980A", 2).len(),
+            KeypadChain::new(2).find_shortest_sequence_length("980A"),
             "<v<A>>^AAAvA^A<vA<AA>>^AvAA<^A>A<v<A>A>^AAAvA<^A>A<vA>^A<A>A".len()
         );
         assert_eq!(
-            find_shortest_sequence("179A", 2).len(),
+            KeypadChain::new(2).find_shortest_sequence_length("179A"),
             "<v<A>>^A<vA<A>>^AAvAA<^A>A<v<A>>^AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A".len()
         );
         assert_eq!(
-            find_shortest_sequence("456A", 2).len(),
+            KeypadChain::new(2).find_shortest_sequence_length("456A"),
             "<v<A>>^AA<vA<A>>^AAvAA<^A>A<vA>^A<A>A<vA>^A<A>A<v<A>A>^AAvA<^A>A".len()
         );
         assert_eq!(
-            find_shortest_sequence("379A", 2).len(),
+            KeypadChain::new(2).find_shortest_sequence_length("379A"),
             "<v<A>>^AvA^A<vA<AA>>^AAvA<^A>AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A".len()
         );
     }
@@ -194,6 +160,69 @@ mod tests {
 
     #[test]
     fn test_part2() {
-        assert_eq!(part2(&input()), 0);
+        assert_eq!(
+            KeypadChain::new(25).find_shortest_sequence_length("029A"),
+            82050061710
+        );
+
+        assert_eq!(
+            KeypadChain::new(25).find_shortest_sequence_length("980A"),
+            72242026390
+        );
+        assert_eq!(
+            KeypadChain::new(25).find_shortest_sequence_length("179A"),
+            81251039228
+        );
+        assert_eq!(
+            KeypadChain::new(25).find_shortest_sequence_length("456A"),
+            80786362258
+        );
+        assert_eq!(
+            KeypadChain::new(25).find_shortest_sequence_length("379A"),
+            77985628636
+        );
+
+        assert_eq!(part2(&input()), 154115708116294);
+    }
+
+    #[test]
+    fn test_4_p2() {
+        let expected = &[
+            12, 26,
+            64,
+            // 162,
+            // 394,
+            // 988,
+            // 2434,
+            // 6082,
+            // 15090,
+            // 37576,
+            // 93444,
+            // 232450,
+            // 578314,
+            // 1438450,
+            // 3578646,
+            // 8901822,
+            // 22145084,
+            // 55087898,
+            // 137038728,
+            // 340900864,
+            // 848032810,
+            // 2109590876,
+            // 5247866716,
+            // 13054736520,
+            // 32475283854,
+            // 80786362258,
+        ];
+
+        let code = "456A";
+
+        for (i, exp) in expected.iter().enumerate() {
+            println!("Code: {}, n robots: {}", code, i);
+            assert_eq!(
+                KeypadChain::new(i).find_shortest_sequence_length(code),
+                *exp
+            );
+        }
     }
 }

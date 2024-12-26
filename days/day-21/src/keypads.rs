@@ -1,262 +1,157 @@
-use std::{collections::HashMap, usize, vec};
+use std::{collections::HashMap, fmt::format};
 
-use lib::{debugln, Grid2d, Point};
+use lib::{debugln, Point};
 
-#[derive(PartialEq, Eq)]
-enum DirectionalButton {
-    Up,
-    Down,
-    Left,
-    Right,
-    A,
-    Empty,
+type Keypad = HashMap<char, Point>;
+
+fn new_numeric_keypad() -> Keypad {
+    [
+        ['7', '8', '9'],
+        ['4', '5', '6'],
+        ['1', '2', '3'],
+        [' ', '0', 'A'],
+    ]
+    .iter()
+    .enumerate()
+    .flat_map(|(i, row)| {
+        row.iter()
+            .enumerate()
+            .map(move |(j, c)| (*c, (i as i64, j as i64).into()))
+    })
+    .collect()
 }
 
-#[derive(PartialEq, Eq)]
-enum NumericButton {
-    B1,
-    B2,
-    B3,
-    B4,
-    B5,
-    B6,
-    B7,
-    B8,
-    B9,
-    B0,
-    A,
-    Empty,
+fn new_directional_keypad() -> Keypad {
+    [[' ', '^', 'A'], ['<', 'v', '>']]
+        .iter()
+        .enumerate()
+        .flat_map(|(i, row)| {
+            row.iter()
+                .enumerate()
+                .map(move |(j, c)| (*c, (i as i64, j as i64).into()))
+        })
+        .collect()
 }
 
-pub type GlobalSequenceCache = HashMap<String, String>;
-pub type SequenceCache = HashMap<(Point, Point), String>;
-pub trait Keypad {
-    fn sequence_for(
-        &mut self,
-        code: &str,
-        cache: &mut SequenceCache,
-        global_cache: &mut GlobalSequenceCache,
-    ) -> String;
+pub struct KeypadChain {
+    numeric_keypad: Keypad,
+    directional_keypad: Keypad,
+    n_directional_keypads: usize,
+
+    path_cost_cache: HashMap<(usize, char, char), usize>,
 }
 
-pub struct DirectionalKeyPad {
-    cursor: Point,
-    grid: Grid2d<DirectionalButton>,
-}
-
-impl DirectionalKeyPad {
-    pub fn new() -> Self {
-        use DirectionalButton::*;
-
+impl KeypadChain {
+    pub fn new(n_directional_keypads: usize) -> Self {
         Self {
-            grid: Grid2d::new(vec![vec![Empty, Up, A], vec![Left, Down, Right]]),
-            cursor: (0, 2).into(),
+            numeric_keypad: new_numeric_keypad(),
+            directional_keypad: new_directional_keypad(),
+            n_directional_keypads,
+
+            path_cost_cache: HashMap::new(),
         }
     }
 
-    fn button_for(&self, c: char) -> DirectionalButton {
-        use DirectionalButton::*;
-
-        match c {
-            '^' => Up,
-            '<' => Left,
-            '>' => Right,
-            'v' => Down,
-            'A' => A,
-            _ => panic!("Unsupported button: {}", c),
-        }
+    pub fn find_shortest_sequence_length(&mut self, code: &str) -> usize {
+        self.keypresses_cost(code, self.n_directional_keypads + 1)
     }
 
-    fn move_to(&mut self, button: DirectionalButton, cache: &mut SequenceCache) -> String {
-        // First down, then right to avoid empty cell
-        let target_position = self.find_button(button).unwrap();
+    fn keypresses_cost(&mut self, code: &str, n_robots: usize) -> usize {
+        // We start on A, we need to sum the cost of each code part A -> 1, 1 -> 2
+        let code = "A".to_string() + code;
 
-        if let Some(seq) = cache.get(&(self.cursor, target_position)) {
-            self.cursor = target_position;
+        let left = code.chars().take(code.len() - 1);
+        let right = code.chars().skip(1);
 
-            return seq.clone();
-        }
-
-        let vector = target_position - self.cursor;
-        let mut seq = String::with_capacity(5);
-
-        if vector.x > 0 {
-            seq.push_str(&"v".repeat(vector.x.unsigned_abs() as usize));
-        }
-        if vector.y > 0 {
-            seq.push_str(&">".repeat(vector.y.unsigned_abs() as usize));
-        }
-        if vector.x < 0 {
-            seq.push_str(&"^".repeat(vector.x.unsigned_abs() as usize));
-        }
-        if vector.y < 0 {
-            seq.push_str(&"<".repeat(vector.y.unsigned_abs() as usize));
-        }
-
-        seq.push('A');
-        cache.insert((self.cursor, target_position), seq.clone());
-
-        self.cursor = target_position;
-
-        seq
+        left.zip(right)
+            .map(|(from, to)| self.path_cost(from, to, n_robots))
+            .sum()
     }
 
-    fn find_button(&self, button: DirectionalButton) -> Option<Point> {
-        for (i, l) in self.grid.iter() {
-            for (j, t) in l.iter() {
-                if *t == button {
-                    return Some((i as i64, j as i64).into());
-                }
-            }
+    fn path_cost(&mut self, from: char, to: char, n_robots: usize) -> usize {
+        // On the last keypad we can input directly
+        if n_robots == 0 {
+            return 1;
         }
 
-        None
-    }
-}
+        let indent_size = self.n_directional_keypads + 1 - n_robots;
+        let indent = "\t".repeat(indent_size);
 
-pub struct NumericKeypad {
-    cursor: Point,
-    grid: Grid2d<NumericButton>,
-}
+        debugln!(
+            "{}({}) Computing path cost {} -> {}",
+            indent,
+            n_robots,
+            from,
+            to
+        );
 
-impl NumericKeypad {
-    pub fn new() -> Self {
-        use NumericButton::*;
-
-        Self {
-            grid: Grid2d::new(vec![
-                vec![B7, B8, B9],
-                vec![B4, B5, B6],
-                vec![B1, B2, B3],
-                vec![Empty, B0, A],
-            ]),
-            cursor: (3, 2).into(),
-        }
-    }
-
-    fn button_for(&self, c: char) -> NumericButton {
-        use NumericButton::*;
-
-        match c {
-            '0' => B0,
-            '1' => B1,
-            '2' => B2,
-            '3' => B3,
-            '4' => B4,
-            '5' => B5,
-            '6' => B6,
-            '7' => B7,
-            '8' => B8,
-            '9' => B9,
-            'A' => A,
-            _ => panic!("Unsupported button: {}", c),
-        }
-    }
-
-    fn move_to(&mut self, button: NumericButton, cache: &mut SequenceCache) -> String {
-        let target_position = self.find_button(button).unwrap();
-
-        if let Some(seq) = cache.get(&(self.cursor, target_position)) {
-            self.cursor = target_position;
-            return seq.clone();
+        if let Some(&result) = self.path_cost_cache.get(&(n_robots, from, to)) {
+            debugln!(
+                "\t{}[CACHE] Path cost hit ({:?}) = {}",
+                indent,
+                (n_robots, from, to),
+                result
+            );
+            return result;
         }
 
-        let vector = target_position - self.cursor;
-        let mut seq = String::with_capacity(10);
-
-        debugln!("Cursor: {:?}", self.cursor);
-        debugln!("Target: {:?}", target_position);
-        debugln!("Vector: {:?}", vector);
-
-        // First right to optimize sequence for other Keypads
-        // But we neeed to handle the case around the empty space
-        if self.cursor.x == 3 && target_position.y == 0 {
-            seq.push_str(&"^".repeat(vector.x.unsigned_abs() as usize));
-            seq.push_str(&"<".repeat(vector.y.unsigned_abs() as usize));
-        } else if self.cursor.y == 0 && target_position.x == 3 {
-            seq.push_str(&">".repeat(vector.y.unsigned_abs() as usize));
-            seq.push_str(&"v".repeat(vector.x.unsigned_abs() as usize));
+        let keypad = if n_robots > self.n_directional_keypads {
+            &self.numeric_keypad
         } else {
-            if vector.y < 0 {
-                seq.push_str(&"<".repeat(vector.y.unsigned_abs() as usize));
-            }
-            if vector.x > 0 {
-                seq.push_str(&"v".repeat(vector.x.unsigned_abs() as usize));
-            }
-            if vector.y > 0 {
-                seq.push_str(&">".repeat(vector.y.unsigned_abs() as usize));
-            }
-            if vector.x < 0 {
-                seq.push_str(&"^".repeat(vector.x.unsigned_abs() as usize));
-            }
-        }
+            &self.directional_keypad
+        };
 
-        seq.push('A');
+        let from_coord = keypad[&from];
+        let to_coord = keypad[&to];
+        let impossible_coord: Point = keypad[&' '];
+        let vector = to_coord - from_coord;
 
-        cache.insert((self.cursor, target_position), seq.clone());
+        let vertical_steps =
+            if vector.x > 0 { "v" } else { "^" }.repeat(vector.x.unsigned_abs() as usize);
+        let horizontal_steps =
+            if vector.y > 0 { ">" } else { "<" }.repeat(vector.y.unsigned_abs() as usize);
 
-        self.cursor = target_position;
+        // It is generally better to have continous sequence of move >>^^ instance of >^>^ to
+        // reduce move count
+        let vertical_first = format!("{vertical_steps}{horizontal_steps}A");
+        let horizontal_first = format!("{horizontal_steps}{vertical_steps}A");
 
-        seq
-    }
+        debugln!(
+            "{}\t{:?} -> {:?} = {:?}",
+            indent,
+            from_coord,
+            to_coord,
+            vector
+        );
+        debugln!("{}\tVF: {}", indent, vertical_first);
+        debugln!("{}\tHF: {}", indent, horizontal_first);
 
-    fn find_button(&self, button: NumericButton) -> Option<Point> {
-        for (i, l) in self.grid.iter() {
-            for (j, t) in l.iter() {
-                if *t == button {
-                    return Some((i as i64, j as i64).into());
-                }
-            }
-        }
+        // We need to check that on the corner we don't go through the empty cell
+        let vertical_first_cost = if impossible_coord == (to_coord.x, from_coord.y).into() {
+            usize::MAX
+        } else {
+            self.keypresses_cost(&vertical_first, n_robots - 1)
+        };
 
-        None
-    }
-}
+        let horizontal_first_cost = if vertical_first == horizontal_first
+            || impossible_coord == (from_coord.x, to_coord.y).into()
+        {
+            usize::MAX
+        } else {
+            self.keypresses_cost(&horizontal_first, n_robots - 1)
+        };
 
-impl Keypad for NumericKeypad {
-    fn sequence_for(
-        &mut self,
-        code: &str,
-        cache: &mut SequenceCache,
-        _: &mut GlobalSequenceCache,
-    ) -> String {
-        let mut sequence: Vec<String> = Vec::with_capacity(code.len());
+        debugln!(
+            "{}\tVF = {}, HF = {}",
+            indent,
+            vertical_first_cost,
+            horizontal_first_cost
+        );
 
-        for c in code.chars() {
-            let button = self.button_for(c);
-            let seq = self.move_to(button, cache);
+        let result = vertical_first_cost.min(horizontal_first_cost);
+        self.path_cost_cache.insert((n_robots, from, to), result);
 
-            sequence.push(seq);
-        }
-
-        sequence.join("")
-    }
-}
-
-impl Keypad for DirectionalKeyPad {
-    fn sequence_for(
-        &mut self,
-        code: &str,
-        cache: &mut SequenceCache,
-        global_cache: &mut GlobalSequenceCache,
-    ) -> String {
-        if let Some(seq) = global_cache.get(code) {
-            return seq.clone();
-        }
-
-        let mut sequence = Vec::with_capacity(code.len());
-
-        for c in code.chars() {
-            let button = self.button_for(c);
-            let seq = self.move_to(button, cache);
-
-            sequence.push(seq);
-        }
-
-        let result = sequence.join("");
-
-        global_cache.insert(code.to_string(), result.clone());
-
+        debugln!("{}<==", indent);
         result
     }
 }

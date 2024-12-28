@@ -1,0 +1,9 @@
+[package]
+name = "day-24"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+colored = "2.2.0"
+itertools = "0.13.0"
+lib = { path = "../../lib" }

@@ -28,6 +28,10 @@ impl From<Direction> for Point {
             Direction::Down => (1, 0).into(),
             Direction::Left => (0, -1).into(),
             Direction::Right => (0, 1).into(),
+            Direction::UpLeft => (-1, -1).into(),
+            Direction::UpRight => (-1, 1).into(),
+            Direction::DownLeft => (1, -1).into(),
+            Direction::DownRight => (1, 1).into(),
         }
     }
 }
@@ -39,6 +43,10 @@ impl From<&Direction> for Point {
             Direction::Down => (1, 0).into(),
             Direction::Left => (0, -1).into(),
             Direction::Right => (0, 1).into(),
+            Direction::UpLeft => (-1, -1).into(),
+            Direction::UpRight => (-1, 1).into(),
+            Direction::DownLeft => (1, -1).into(),
+            Direction::DownRight => (1, 1).into(),
         }
     }
 }
@@ -111,12 +119,16 @@ impl std::fmt::Debug for Point {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Direction {
     Up,
     Down,
     Left,
     Right,
+    UpLeft,
+    UpRight,
+    DownLeft,
+    DownRight,
 }
 
 impl Direction {
@@ -130,12 +142,33 @@ impl Direction {
         }
     }
 
+    pub fn turn_right(&self) -> Self {
+        match self {
+            Self::Down => Self::Left,
+            Self::Left => Self::Up,
+            Self::Up => Self::Right,
+            Self::Right => Self::Down,
+            _ => panic!("Diagonal not supported"),
+        }
+    }
+
+    pub fn turn_left(&self) -> Self {
+        match self {
+            Self::Down => Self::Right,
+            Self::Right => Self::Up,
+            Self::Up => Self::Left,
+            Self::Left => Self::Down,
+            _ => panic!("Diagonal not supported"),
+        }
+    }
+
     pub fn turn_around(&self) -> Self {
         match self {
             Direction::Up => Direction::Down,
             Direction::Down => Direction::Up,
             Direction::Left => Direction::Right,
             Direction::Right => Direction::Left,
+            _ => panic!("Diagonal not supported"),
         }
     }
 
@@ -149,6 +182,17 @@ impl Direction {
         }
     }
 }
+
+pub const ALL_DIRECTIONS: [Direction; 8] = [
+    Direction::UpLeft,
+    Direction::Up,
+    Direction::UpRight,
+    Direction::Left,
+    Direction::Right,
+    Direction::DownLeft,
+    Direction::Down,
+    Direction::DownRight,
+];
 
 pub const CARDINAL_DIRECTIONS: [Direction; 4] = [
     Direction::Up,

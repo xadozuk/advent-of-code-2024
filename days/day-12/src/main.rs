@@ -139,5 +139,48 @@ EEEEE
             )),
             16 * 8 + 8 * 8 + 1 * 4
         );
+
+        assert_eq!(
+            part2(&parse_input(
+                r#"
+EEEEE
+EAEAE
+EEEEE
+EAEAE
+EEEEE
+            "#
+                .trim()
+            )),
+            (4 * 1) * 4 + 21 * 20
+        );
+
+        assert_eq!(
+            part2(&parse_input(
+                r#"
+AEEEA
+EEEEE
+EEEEE
+EEEEE
+AEEEA
+            "#
+                .trim()
+            )),
+            (4 * 1) * 4 + 21 * 12
+        );
+        assert_eq!(
+            part2(&parse_input(
+                r#"
+AAAAAAAA
+AACBBDDA
+AACBBAAA
+ABBAAAAA
+ABBADDDA
+AAAADADA
+AAAAAAAA
+            "#
+                .trim()
+            )),
+            946
+        );
     }
 }

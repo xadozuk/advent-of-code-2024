@@ -1,4 +1,17 @@
-use crate::Point;
+use std::ops::Index;
+
+use crate::{Point, ALL_DIRECTIONS};
+
+pub type AllNeighboorsTuple<'a, T> = (
+    Option<&'a T>,
+    Option<&'a T>,
+    Option<&'a T>,
+    Option<&'a T>,
+    Option<&'a T>,
+    Option<&'a T>,
+    Option<&'a T>,
+    Option<&'a T>,
+);
 
 #[derive(Clone)]
 pub struct Grid2d<T> {
@@ -44,6 +57,29 @@ impl<T> Grid2d<T> {
 
     pub fn cardinal_neighboors(&self, pos: Point) -> iterator::CardinalNeighboors<T> {
         iterator::CardinalNeighboors::new(self, pos)
+    }
+
+    pub fn all_neighboors_tuple(&self, pos: Point) -> AllNeighboorsTuple<T> {
+        use super::Direction::*;
+
+        (
+            self.at(&(pos + UpLeft.into())),
+            self.at(&(pos + Up.into())),
+            self.at(&(pos + UpRight.into())),
+            self.at(&(pos + Left.into())),
+            self.at(&(pos + Right.into())),
+            self.at(&(pos + DownLeft.into())),
+            self.at(&(pos + Down.into())),
+            self.at(&(pos + DownRight.into())),
+        )
+    }
+}
+
+impl<T> Index<usize> for Grid2d<T> {
+    type Output = Vec<T>;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.values[index]
     }
 }
 

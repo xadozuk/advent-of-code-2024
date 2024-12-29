@@ -1,6 +1,6 @@
 use std::ops::Index;
 
-use crate::{Point, ALL_DIRECTIONS};
+use crate::Point;
 
 pub type AllNeighboorsTuple<'a, T> = (
     Option<&'a T>,
